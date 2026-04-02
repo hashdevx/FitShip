@@ -1,0 +1,8 @@
+{
+  "name": "Fitship",
+  "description": "A hybrid SaaS and Marketplace platform for gym aggregation in India. Har Gym Tera Gym.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

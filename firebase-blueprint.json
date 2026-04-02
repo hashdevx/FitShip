@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile data including credits and workout history",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "phone": { "type": "string" },
+        "credits": { "type": "number" },
+        "role": { "type": "string", "enum": ["user", "owner", "admin"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "muscle_log_json": { "type": "string" },
+        "fitness_goal": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "role"]
+    },
+    "Gym": {
+      "title": "Gym",
+      "description": "Gym partner details and pricing",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "owner_id": { "type": "string" },
+        "monthly_fee": { "type": "number" },
+        "session_cost": { "type": "number" },
+        "location": { "type": "object" },
+        "verified_status": { "type": "string", "enum": ["pending", "verified", "rejected"] },
+        "trial_end_date": { "type": "string", "format": "date-time" },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "equipment": { "type": "array", "items": { "type": "string" } },
+        "address": { "type": "string" }
+      },
+      "required": ["name", "owner_id", "monthly_fee"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial records for recharges and check-ins",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "gym_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "owner_share": { "type": "number" },
+        "commission": { "type": "number" },
+        "type": { "type": "string", "enum": ["recharge", "check-in"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "amount", "type", "timestamp"]
+    },
+    "WorkoutLog": {
+      "title": "WorkoutLog",
+      "description": "Log of muscles trained in a session",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "gym_id": { "type": "string" },
+        "muscle_array": { "type": "array", "items": { "type": "string" } },
+        "intensity": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "gym_id", "muscle_array", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "Profile",
+      "description": "User profiles"
+    },
+    "/gyms/{gymId}": {
+      "schema": "Gym",
+      "description": "Partner gyms"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial logs"
+    },
+    "/workout_logs/{logId}": {
+      "schema": "WorkoutLog",
+      "description": "Workout history"
+    }
+  }
+}

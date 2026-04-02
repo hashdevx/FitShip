@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - uid: string (required)
+    //   - role: string (required, enum: ['user', 'owner', 'admin'])
+    //   - credits: number
+    //   - phone: string
+    //   - displayName: string
+    //   - photoURL: string
+    //
+    // Collection: gyms
+    // Fields:
+    //   - name: string (required)
+    //   - owner_id: string (required)
+    //   - monthly_fee: number (required)
+    //   - session_cost: number
+    //   - verified_status: string (enum: ['pending', 'verified', 'rejected'])
+    //   - trial_end_date: timestamp
+    //
+    // Collection: transactions
+    // Fields:
+    //   - user_id: string (required)
+    //   - gym_id: string
+    //   - amount: number (required)
+    //   - type: string (enum: ['recharge', 'check-in'])
+    //   - timestamp: timestamp
+    //
+    // Collection: workout_logs
+    // Fields:
+    //   - user_id: string (required)
+    //   - gym_id: string (required)
+    //   - muscle_array: list (required)
+    //   - timestamp: timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'admin' || 
+        (request.auth.token.email == "iajdaksh@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isGymOwner() {
+      return isAuthenticated() && getUserData().role == 'owner';
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && 
+                    request.resource.data.role in ['user', 'owner'] &&
+                    request.resource.data.credits == 0;
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && 
+         request.resource.data.role == resource.data.role && 
+         request.resource.data.credits == resource.data.credits) || 
+        isAdmin()
+      );
+    }
+
+    match /gyms/{gymId} {
+      allow read: if true; // Publicly searchable
+      allow create: if isGymOwner() && request.resource.data.owner_id == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (isGymOwner() && resource.data.owner_id == request.auth.uid && 
+         request.resource.data.owner_id == resource.data.owner_id &&
+         request.resource.data.verified_status == resource.data.verified_status) || 
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{txId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.user_id || 
+        (isGymOwner() && request.auth.uid == resource.data.gym_id) || 
+        isAdmin()
+      );
+      // Transactions should mostly be created by server-side logic or strictly validated
+      // For this demo, we allow creation if user_id matches
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /workout_logs/{logId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.user_id || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+    }
+  }
+}
